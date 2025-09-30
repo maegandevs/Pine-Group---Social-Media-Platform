@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dallas College Social Platform</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen p-4">
+
+    <!-- Header -->
+    <header class="w-full max-w-2xl bg-blue shadow-md rounded-lg p-4 mb-6 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">Dallas College Social Platform</h1>
+        <div class="flex items-center space-x-4">
+            <span id="username-display" class="text-gray-600 font-medium">Hello, Dallas College User!</span>
+            <button id="logout-btn" class="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200">Logout</button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="w-full max-w-2xl">
+
+        <!-- Post Creation Section -->
+        <section class="bg-white shadow-md rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Share what's on your mind?</h2>
+            <textarea id="post-input" rows="4" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Share something with your friends..."></textarea>
+            <button id="post-btn" class="mt-4 px-6 py-3 w-full bg-blue-600 text-white font-bold rounded-lg shadow-sm hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Post</button>
+        </section>
+
+        <!-- Posts Display Section -->
+        <section id="posts-container" class="space-y-4">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Recent Posts</h2>
+            <!-- Example Post (will be dynamically created) -->
+            <div class="bg-white shadow-md rounded-lg p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-gray-300 rounded-full mr-3"></div>
+                    <div>
+                        <p class="font-semibold text-gray-900">Kyllie Smith</p>
+                        <p class="text-sm text-gray-500">1 hour ago</p>
+                    </div>
+                </div>
+                <p class="text-gray-700">This is an example post to show what the layout would look like.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        document.getElementById('post-btn').addEventListener('click', () => {
+            const postInput = document.getElementById('post-input');
+            const postText = postInput.value.trim();
+            if (postText) {
+                // Placeholder for now. In a real app, this would send data to a backend.
+                alert('Your post has been submitted!');
+                postInput.value = ''; // Clear the input
+            } else {
+                alert('Please enter some text to post.');
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            // In a real app, this would handle the logout process
+            alert('You have been logged out.');
+            window.location.href = '#'; // Redirect to a login page or home
+        });
+    </script>
+
+</body>
+</html>
