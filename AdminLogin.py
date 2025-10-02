@@ -34,7 +34,7 @@ root.title("Admin_Login")
 root.geometry("400x150")
 
 # create labels and entry fields
-# name label
+# username label
 username_label = tk.Label(root, text="Enter Admin Username: ")
 username_label.grid(row=0, column=0, padx=10, pady=5, stickey="w")
 username_entry = tk.Entry(root)
