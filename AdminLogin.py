@@ -60,5 +60,4 @@ submit_button = tk.Button(root, text="Submit", command=process_admin_login)
 submit_button.grid(row=2, column=0, columnspan=2, pady=10)
 root.bind("<Return>", lambda event: process_admin_login())
 
-
 root.mainloop()
