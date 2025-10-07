@@ -292,58 +292,153 @@ def show_registration_screen(root):
 
 # User Dashboard
 def show_user_dashboard(root, user_email):
-    clear_window(root)
-    root.title("User Dashboard")
+    pass
+#     clear_window(root)
+#     root.title("User Dashboard")
 
-    user_data = get_user_data(user_email)
-    if not user_data:
-        messagebox.showerror("Error", "User data not found.")
-        show_login_screen(root)
-        return
+#     user_data = get_user_data(user_email)
+#     if not user_data:
+#         messagebox.showerror("Error", "User data not found.")
+#         show_login_screen(root)
+#         return
         
-    main_frame = tk.Frame(root, padx=20, pady=20)
-    main_frame.pack(expand=True)
+#     main_frame = tk.Frame(root, padx=20, pady=20)
+#     main_frame.pack(expand=True)
 
-    tk.Label(main_frame, text=f"Welcome, {user_data['name']}!", font=("Arial", 16, "bold")).pack(pady=10)
-    tk.Label(main_frame, text="This is your main dashboard.", font=("Arial", 12)).pack(pady=5)
+#     tk.Label(main_frame, text=f"Welcome, {user_data['name']}!", font=("Arial", 16, "bold")).pack(pady=10)
+#     tk.Label(main_frame, text="This is your main dashboard.", font=("Arial", 12)).pack(pady=5)
     
-    # Functionality Buttons
-    tk.Button(main_frame, text="View Profile", width=30, command=lambda: show_user_profile(root, user_email)).pack(pady=5)
+#     # Functionality Buttons
+#     tk.Button(main_frame, text="View Profile", width=30, command=lambda: show_user_profile(root, user_email)).pack(pady=5)
     
-    # Placeholder for the main Social Media Home Page from the uploaded HTML file
-    tk.Button(main_frame, text="Go to Social Feed (Mock)", width=30, command=lambda: show_home_page(user_data)).pack(pady=5)
+#     # Edit Profile Button 
+#     tk.Button(main_frame, text="Edit Profile", width=30, command=lambda: edit_user_profile(root, user_email)).pack(pady=5)
+    
+#     # Placeholder for the main Social Media Home Page from the uploaded HTML file
+#     tk.Button(main_frame, text="Go to Social Feed (Mock)", width=30, command=lambda: show_home_page(user_data)).pack(pady=5)
 
-    tk.Button(main_frame, text="Logout", width=30, command=lambda: show_login_screen(root)).pack(pady=15)
+#     tk.Button(main_frame, text="Logout", width=30, command=lambda: show_login_screen(root)).pack(pady=15)
 
-def show_user_profile(root, user_email):
-    """Displays the user's profile information."""
-    clear_window(root)
-    root.title("My Profile")
+# def show_user_profile(root, user_email):
+#     """Displays the user's profile information."""
+#     clear_window(root)
+#     root.title("My Profile")
     
-    user_data = get_user_data(user_email)
-    if not user_data:
-        messagebox.showerror("Error", "Profile data not found.")
-        show_user_dashboard(root, user_email)
-        return
+#     user_data = get_user_data(user_email)
+#     if not user_data:
+#         messagebox.showerror("Error", "Profile data not found.")
+#         show_user_dashboard(root, user_email)
+#         return
         
-    main_frame = tk.Frame(root, padx=20, pady=20)
-    main_frame.pack(expand=True)
+#     main_frame = tk.Frame(root, padx=20, pady=20)
+#     main_frame.pack(expand=True)
 
-    tk.Label(main_frame, text="User Profile", font=("Arial", 18, "bold")).pack(pady=10)
+#     tk.Label(main_frame, text="User Profile", font=("Arial", 18, "bold")).pack(pady=10)
     
-    tk.Label(main_frame, text=f"Name: {user_data.get('name', 'N/A')}").pack(anchor="w", pady=2)
-    tk.Label(main_frame, text=f"Email: {user_data.get('email', 'N/A')}").pack(anchor="w", pady=2)
-    tk.Label(main_frame, text=f"Role: {user_data.get('role', 'user').capitalize()}").pack(anchor="w", pady=2)
-    tk.Label(main_frame, text="Bio:").pack(anchor="w", pady=5)
+#     tk.Label(main_frame, text=f"Name: {user_data.get('name', 'N/A')}").pack(anchor="w", pady=2)
+#     tk.Label(main_frame, text=f"Email: {user_data.get('email', 'N/A')}").pack(anchor="w", pady=2)
+#     tk.Label(main_frame, text=f"Role: {user_data.get('role', 'user').capitalize()}").pack(anchor="w", pady=2)
+#     tk.Label(main_frame, text="Bio:").pack(anchor="w", pady=5)
     
-    # Bio is displayed in a Text widget to handle multi-line content
-    bio_text = tk.Text(main_frame, height=5, width=40, state=tk.DISABLED)
-    bio_text.insert(tk.END, user_data.get('bio', 'No bio provided.'))
-    bio_text.pack(pady=5)
-    
-    # Back button
-    tk.Button(main_frame, text="Back to Dashboard", width=30, command=lambda: show_user_dashboard(root, user_email)).pack(pady=20)
+#     # Bio is displayed in a Text widget to handle multi-line content
+#     bio_text = tk.Text(main_frame, height=5, width=40, state=tk.DISABLED)
+#     bio_text.insert(tk.END, user_data.get('bio', 'No bio provided.'))
+#     bio_text.pack(pady=5)
 
+#     #insert picture
+    
+#     # Back button
+#     tk.Button(main_frame, text="Back to Dashboard", width=30, command=lambda: show_user_dashboard(root, user_email)).pack(pady=20)
+
+# # ----------------------------------------------Edit User Profile ---------------------------------
+# def edit_user_profile(root , user_email):
+
+#     """Edit user profile"""
+#     clear_window(root)
+    
+#     # Reload profiles to ensure we have latest data
+#     global user_data
+#     user_data= get_user_data(user_email)
+#     if not user_data:
+#         messagebox.showerror("Error", "Profile data not found.")
+#         show_user_dashboard(root, user_email)
+#         return
+        
+    
+
+    
+#     tk.Label(root, text="Edit Profile", font=('Arial', 16, 'bold')).pack(pady=20)
+    
+            
+#     main_frame = tk.Frame(root, padx=20, pady=20)
+#     main_frame.pack(expand=True)
+    
+#     # Name
+#     tk.Label(main_frame, text=f"Name: {user_data.get('name', 'N/A')}").pack(anchor="w", pady=2)
+#     name_entry = tk.Entry(main_frame, width=30)
+#     name_entry.insert(0, current_profile.get('name', ''))
+#     name_entry.grid(row=0, column=1, pady=5, padx=10)
+    
+#     # tk.Label(main_frame, text=f"Email: {user_data.get('email', 'N/A')}").pack(anchor="w", pady=2)
+#     tk.Label(main_frame, text="Bio:").pack(anchor="w", pady=5)
+    
+ 
+#     # # Role
+#     # tk.Label(main_frame, text=f"Role: {user_data.get('role', 'user').capitalize()}").pack(anchor="w", pady=2)
+#     # role_user = tk.Entry(main_frame, width=30)
+#     # role_user.insert(0, current_profile.get('grad_year', ''))
+#     # role_user.grid(row=2, column=1, pady=5, padx=10)
+    
+    
+#     # # Graduation Year
+#     # tk.Label(main_frame, text="Graduation Year:").grid(row=2, column=0, sticky='w', pady=5)
+#     # year_entry = tk.Entry(main_frame, width=30)
+#     # year_entry.insert(0, current_profile.get('grad_year', ''))
+#     # year_entry.grid(row=2, column=1, pady=5, padx=10)
+    
+#     # # Major
+#     # tk.Label(main_frame, text="Major:").grid(row=3, column=0, sticky='w', pady=5)
+#     # major_entry = tk.Entry(main_frame, width=30)
+#     # major_entry.insert(0, current_profile.get('major', ''))
+#     # major_entry.grid(row=3, column=1, pady=5, padx=10)
+    
+#     # # Minor
+#     # tk.Label(main_frame, text="Minor:").grid(row=4, column=0, sticky='w', pady=5)
+#     # minor_entry = tk.Entry(main_frame, width=30)
+#     # minor_entry.insert(0, current_profile.get('minor', ''))
+#     # minor_entry.grid(row=4, column=1, pady=5, padx=10)
+
+    
+#     # Bio
+#     tk.Label(main_frame, text="Bio:").grid(row=1, column=0, sticky='w', pady=5)
+#     bio_entry = tk.Entry(main_frame, width=30)
+#     bio_entry.insert(0, current_profile.get('bio', ''))
+#     bio_entry.grid(row=1, column=1, pady=5, padx=10)
+    
+#     def save_profile():
+#         # Update profiles dictionary
+#         user_data[current_user] = {
+#             'name': name_entry.get(),
+#             'bio': bio_entry.get(),
+#             'grad_year': role_user.get(),
+#             'major': major_entry.get(),
+#             'minor': minor_entry.get()
+#         }
+        
+#         # Save to file
+#         save_profiles(user_data)
+        
+#         messagebox.showinfo("Success", "Profile updated successfully!")
+#         show_dashboard(root, current_user, loginCredentials)
+    
+#     button_frame = tk.Frame(root)
+#     button_frame.pack(pady=20)
+    
+#     tk.Button(button_frame, text="Save Profile", command=save_profile, width=15).pack(side='left', padx=5)
+#     tk.Button(button_frame, text="Cancel", 
+#               command=lambda: show_dashboard(root, current_user, loginCredentials), 
+#               width=15).pack(side='left', padx=5)
+# ----------------------------------------------Edit User Profile ---------------------------------
 def show_home_page(user_data):
     """Mocks the social media home page (from the HTML file) as a simple Tkinter window."""
     home_page = tk.Toplevel()
@@ -463,5 +558,5 @@ def main():
     # 4. Start the Tkinter event loop
     root.mainloop()
 
-if __name__ == "__main__":
-    main()
+# if _name_ == "_main_":
+main()
