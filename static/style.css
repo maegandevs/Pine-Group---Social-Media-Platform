@@ -1,0 +1,88 @@
+/* basic reset to start fresh */
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* navbar container */
+.navbar {
+    background-color: darkblue;
+    color: white;
+    padding: 10px 0;
+}
+
+/* inner flexbox */
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+
+/* logo */
+.logo img{
+    width: 50px;
+    height: auto;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+}
+
+/* spacing out the list (for the bar) */
+.nav-links li{
+    margin-left: 20px;
+}
+
+/* styling the links */
+.nav-links a {
+    color: white;  /* text color */
+    padding: 8px 12px;
+    background-color: gray;  /* button bg */
+    border-radius: 4px;
+    transition: background-color 0.3s; /*for the hover effect */
+}
+
+/* button hover effect */
+nav a:hover {
+background-color: red;
+}
+
+/* hamburger menu (hidden on desktop) */
+.menu-toggle {
+    display: none;
+    font-size: 26px;
+    cursor: pointer;
+    color: white;
+}
+
+/* js responsive portion */
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+        flex-direction: column;
+        background-color: darkblue;
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        width: 150px;
+        border-radius: 8px;
+    }
+
+    .nav-links.active {
+        display: flex;
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    .nav-links li {
+        margin: 10px 0;
+    }
+}
+body{
+    margin-top: 60px; /* to prevent the contents from hiding behind the nav bar */
+}

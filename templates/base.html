@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% end block title %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <!-- nav bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class = "logo">
+                <img src="{{url_for('static', filename='images/logo.png') }}" alt="Logo">
+            </a>
+           
+           <!-- hamburger icon for mobile devices-->
+            <div class="menu-toggle" id="mobile-menu">
+                ☰
+            </div>
+        
+            <!--Nav buttons-->
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/profile">Profile</a></li>
+                <li><a href="/search">Search</a></li>
+                <li><a href="/settings">Settings</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="page-content">
+        {% block content%}{% endblock %}
+    </div>
+
+    <!-- JS -->
+    <script>
+        //menu toggle
+        const menu = document.getElementById('mobile-menu');
+        const navLinks = document.querySelector('.nav-links');
+
+        nemu.addEventListerner('click', () =>{
+            navLinks.classList.toggle('active');
+        })
+    </script>
+    
+    
+</body>
+</html>
