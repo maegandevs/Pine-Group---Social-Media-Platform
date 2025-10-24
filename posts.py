@@ -1,7 +1,8 @@
-import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog, scrolledtext
 import sqlite3
-from datetime import datetime
+import datetime
+from datetime import datetime as dt
+import tkinter as tk
+from tkinter import ttk, messagebox, scrolledtext
 
 DB_FILE = "social_media_full.db"
 TIME_FORMAT = "%m/%d/%Y at %H:%M"
@@ -12,11 +13,10 @@ def get_conn():
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_db():
+def setup_database():
     conn = get_conn()
     c = conn.cursor()
-
-    # users
+    # Users table
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,8 +24,7 @@ def init_db():
             email TEXT NOT NULL UNIQUE
         );
     """)
-
-    # posts
+    # Posts table
     c.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,8 +35,7 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
     """)
-
-    # comments
+    # Comments table
     c.execute("""
         CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,8 +47,7 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
     """)
-
-    # reactions
+    # Reactions table
     c.execute("""
         CREATE TABLE IF NOT EXISTS post_reactions (
             post_id INTEGER NOT NULL,
@@ -94,16 +91,18 @@ def get_user_by_id(user_id):
     conn.close()
     return row
 
-def create_post_db(user_id, content):
-    ts = datetime.now().strftime(TIME_FORMAT)
+def create_post(user_id, content):
+    ts = dt.now().strftime(TIME_FORMAT)
     conn = get_conn()
     c = conn.cursor()
     c.execute("INSERT INTO posts (user_id, content, created_at) VALUES (?, ?, ?)", (user_id, content, ts))
+    post_id = c.lastrowid
     conn.commit()
     conn.close()
+    return post_id
 
-def update_post_db(post_id, new_text):
-    updated_ts = datetime.now().strftime(TIME_FORMAT)
+def update_post(post_id, new_text):
+    updated_ts = dt.now().strftime(TIME_FORMAT)
     conn = get_conn()
     c = conn.cursor()
     c.execute("UPDATE posts SET content = ?, updated_at = ? WHERE id = ?", (new_text, updated_ts, post_id))
@@ -123,14 +122,27 @@ def fetch_posts():
     conn.close()
     return rows
 
-def add_comment_db(post_id, user_id, text):
-    ts = datetime.now().strftime(TIME_FORMAT)
+# ------------------------- COMMENTS -------------------------
+def add_comment(post_id, user_email, comment_text):
+    if not comment_text or not post_id or not user_email:
+        return False
     conn = get_conn()
-    c = conn.cursor()
-    c.execute("INSERT INTO comments (post_id, user_id, comment_text, created_at) VALUES (?, ?, ?, ?)",
-              (post_id, user_id, text, ts))
-    conn.commit()
-    conn.close()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT id FROM users WHERE email = ?", (user_email,))
+        user_row = c.fetchone()
+        if not user_row:
+            return False
+        user_id = user_row['id']
+        c.execute("SELECT id FROM posts WHERE id = ?", (post_id,))
+        if not c.fetchone():
+            return False
+        c.execute("INSERT INTO comments (post_id, user_id, comment_text, created_at) VALUES (?, ?, ?, ?)",
+                  (post_id, user_id, comment_text, dt.now().isoformat()))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
 
 def get_comments_for_post(post_id):
     conn = get_conn()
@@ -146,6 +158,7 @@ def get_comments_for_post(post_id):
     conn.close()
     return rows
 
+# ------------------------- REACTIONS -------------------------
 def get_reaction_counts(post_id):
     conn = get_conn()
     c = conn.cursor()
@@ -167,7 +180,7 @@ def set_reaction(post_id, user_id, reaction_type):
     c = conn.cursor()
     c.execute("SELECT reaction_type FROM post_reactions WHERE post_id = ? AND user_id = ?", (post_id, user_id))
     existing = c.fetchone()
-    now = datetime.now().strftime(TIME_FORMAT)
+    now = dt.now().strftime(TIME_FORMAT)
     if existing:
         if existing['reaction_type'] == reaction_type:
             c.execute("DELETE FROM post_reactions WHERE post_id = ? AND user_id = ?", (post_id, user_id))
@@ -184,7 +197,7 @@ def set_reaction(post_id, user_id, reaction_type):
 class SocialApp:
     def __init__(self, root):
         self.root = root
-        root.title("Instagram-Style Posts")
+        root.title("Social Media Posts")
         root.geometry("1000x700")
         root.config(bg="#fafafa")
         self.current_user = None
@@ -198,34 +211,116 @@ class SocialApp:
         self.left_frame = tk.Frame(root, bg="white", bd=1, relief="solid")
         self.left_frame.place(x=20, y=20, width=340, height=660)
 
-        ttk.Label(self.left_frame, text="Account", font=("Segoe UI", 14, "bold"), background="white").pack(pady=10)
-
-        ttk.Label(self.left_frame, text="Email", background="white").pack(anchor="w", padx=20)
+        ttk.Label(self.left_frame, text="Account", font=("Segoe UI", 14, "bold")).pack(pady=10)
+        ttk.Label(self.left_frame, text="Email").pack(anchor="w", padx=20)
         self.email_entry = ttk.Entry(self.left_frame, width=28)
-        self.email_entry.pack(padx=20, pady=(0, 8))
+        self.email_entry.pack(padx=20, pady=(0,8))
 
-        ttk.Label(self.left_frame, text="Username", background="white").pack(anchor="w", padx=20)
+        ttk.Label(self.left_frame, text="Username").pack(anchor="w", padx=20)
         self.username_entry = ttk.Entry(self.left_frame, width=28)
-        self.username_entry.pack(padx=20, pady=(0, 8))
+        self.username_entry.pack(padx=20, pady=(0,8))
 
         btn_frame = tk.Frame(self.left_frame, bg="white")
         btn_frame.pack(pady=6)
-        ttk.Button(btn_frame, text="Register", command=self.register).grid(row=0, column=0, padx=8)
-        ttk.Button(btn_frame, text="Login", command=self.login).grid(row=0, column=1, padx=8)
+        ttk.Button(btn_frame, text="Register", command=self.register).grid(row=0,column=0,padx=8)
+        ttk.Button(btn_frame, text="Login", command=self.login).grid(row=0,column=1,padx=8)
 
-        self.logged_label = ttk.Label(self.left_frame, text="Not logged in", background="white", font=("Segoe UI", 10))
-        self.logged_label.pack(padx=20, pady=(6, 12))
+        self.logged_label = ttk.Label(self.left_frame, text="Not logged in", font=("Segoe UI", 10))
+        self.logged_label.pack(padx=20, pady=(6,12))
 
-        ttk.Label(self.left_frame, text="Create a Post", background="white", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=20)
+        ttk.Label(self.left_frame, text="Create a Post", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=20)
         self.post_text = scrolledtext.ScrolledText(self.left_frame, width=36, height=7, wrap=tk.WORD, font=("Segoe UI", 10))
-        self.post_text.pack(padx=20, pady=(6, 10))
+        self.post_text.pack(padx=20, pady=(6,10))
         self.post_button = ttk.Button(self.left_frame, text="Share Post", command=self.create_post)
         self.post_button.pack(pady=6)
 
         # RIGHT PANEL
         self.right_frame = tk.Frame(root, bg="#fafafa", bd=0)
         self.right_frame.place(x=380, y=20, width=600, height=660)
+        ttk.Label(self.right_frame, text="Feed", font=("Segoe UI", 16, "bold")).pack(pady=10)
+        self.feed_frame = tk.Frame(self.right_frame, bg="#fafafa")
+        self.feed_frame.pack(fill="both", expand=True)
+        self.refresh_feed()
 
-        ttk.Label(self.right_frame, text="Feed", font=("Segoe UI", 16, "bold"), background="#fafafa").pack(pady=10)
+    def register(self):
+        email = self.email_entry.get().strip()
+        username = self.username_entry.get().strip()
+        if not email or not username:
+            messagebox.showwarning("Input Error", "Email and Username required")
+            return
+        uid = create_user(username, email)
+        if uid:
+            self.current_user = {'id': uid, 'username': username, 'email': email}
+            self.logged_label.config(text=f"Logged in as {username}")
+            messagebox.showinfo("Success", f"User {username} registered!")
+            self.refresh_feed()
+        else:
+            messagebox.showwarning("Exists", "User already exists")
 
-        self.posts
+    def login(self):
+        email = self.email_entry.get().strip()
+        user = get_user_by_email(email)
+        if user:
+            self.current_user = dict(user)
+            self.logged_label.config(text=f"Logged in as {user['username']}")
+            messagebox.showinfo("Success", f"Welcome {user['username']}")
+            self.refresh_feed()
+        else:
+            messagebox.showwarning("Not Found", "User not found. Please register first.")
+
+    def create_post(self):
+        if not self.current_user:
+            messagebox.showwarning("Not logged in", "Please login first")
+            return
+        content = self.post_text.get("1.0","end").strip()
+        if not content:
+            messagebox.showwarning("Empty Post", "Post content cannot be empty")
+            return
+        create_post(self.current_user['id'], content)
+        self.post_text.delete("1.0","end")
+        self.refresh_feed()
+
+    def refresh_feed(self):
+        for widget in self.feed_frame.winfo_children():
+            widget.destroy()
+        posts = fetch_posts()
+        for p in posts:
+            frame = tk.Frame(self.feed_frame, bg="white", bd=1, relief="solid")
+            frame.pack(fill="x", padx=10, pady=5)
+            ttk.Label(frame, text=f"{p['username']} ({p['created_at']})", font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=6, pady=2)
+            ttk.Label(frame, text=p['content'], wraplength=580).pack(anchor="w", padx=6)
+            # Comments
+            comments = get_comments_for_post(p['id'])
+            if comments:
+                ttk.Label(frame, text="Comments:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=6)
+                for c in comments:
+                    ttk.Label(frame, text=f"{c['username']}: {c['comment_text']}", wraplength=580, font=("Segoe UI", 9)).pack(anchor="w", padx=12)
+            # Buttons
+            btn_frame = tk.Frame(frame, bg="white")
+            btn_frame.pack(anchor="w", pady=4, padx=6)
+            ttk.Button(btn_frame, text="Like", command=lambda pid=p['id']: self.react(pid,'like')).pack(side="left", padx=2)
+            ttk.Button(btn_frame, text="Dislike", command=lambda pid=p['id']: self.react(pid,'dislike')).pack(side="left", padx=2)
+            ttk.Button(btn_frame, text="Comment", command=lambda pid=p['id']: self.add_comment_gui(pid)).pack(side="left", padx=2)
+
+    def react(self, post_id, r_type):
+        if not self.current_user:
+            messagebox.showwarning("Not logged in", "Login to react")
+            return
+        set_reaction(post_id, self.current_user['id'], r_type)
+        self.refresh_feed()
+
+    def add_comment_gui(self, post_id):
+        if not self.current_user:
+            messagebox.showwarning("Not logged in", "Login to comment")
+            return
+        comment = simpledialog.askstring("Comment", "Enter your comment:")
+        if comment:
+            add_comment(post_id, self.current_user['email'], comment)
+            self.refresh_feed()
+
+# ------------------------- MAIN -------------------------
+if __name__ == "__main__":
+    setup_database()
+    root = tk.Tk()
+    app = SocialApp(root)
+    root.mainloop()
