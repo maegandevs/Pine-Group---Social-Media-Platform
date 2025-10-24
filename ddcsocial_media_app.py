@@ -317,10 +317,76 @@ def show_user_dashboard(root, user_email):
     # Edit Profile Button
     tk.Button(main_frame, text="Edit Profile", width=30, command=lambda: edit_user_profile(root, user_email)).pack(pady=5)
    
+    # Button for Search student 
+    tk.Button(main_frame, text="Search Students", width=30, command=lambda: search_students(root, user_email)).pack(pady=5)
+
     # Placeholder for the main Social Media Home Page from the uploaded HTML file
     tk.Button(main_frame, text="Go to Social Feed (Mock)", width=30, command=lambda: show_home_page(user_data)).pack(pady=5)
 
     tk.Button(main_frame, text="Logout", width=30, command=lambda: show_login_screen(root)).pack(pady=15)
+
+  
+
+# ----------------------------------------------Search Students ---------------------------------------------
+# ---------------------------------------------- Search Other Students ---------------------------------
+def search_students(root, user_email):
+    """Allows the logged-in user to search for other students by name."""
+    clear_window(root)
+    root.title("Search Students")
+
+    main_frame = tk.Frame(root, padx=20, pady=20)
+    main_frame.pack(expand=True)
+
+    tk.Label(main_frame, text="Search for Students", font=("Arial", 16, "bold")).grid(row=0, column=0, columnspan=2, pady=10)
+
+    # Search field
+    tk.Label(main_frame, text="Enter student name:").grid(row=1, column=0, sticky="w", pady=5)
+    search_entry = tk.Entry(main_frame, width=30)
+    search_entry.grid(row=1, column=1, pady=5)
+
+    results_frame = tk.Frame(main_frame)
+    results_frame.grid(row=3, column=0, columnspan=2, pady=10)
+
+    def perform_search():
+        for widget in results_frame.winfo_children():
+            widget.destroy()
+
+        search_term = search_entry.get().strip()
+        if not search_term:
+            messagebox.showerror("Error", "Please enter a name to search.")
+            return
+
+        conn = get_db_connection()
+        if conn is None:
+            return
+
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name, email, bio FROM users WHERE name LIKE ? AND email != ?", (f"%{search_term}%", user_email))
+            results = cursor.fetchall()
+
+            if not results:
+                tk.Label(results_frame, text="No students found.", fg="gray").pack()
+                return
+
+            # Display results
+            for i, (name, email, bio) in enumerate(results, start=1):
+                tk.Label(results_frame, text=f"{i}. {name}", font=("Arial", 12, "bold")).pack(anchor="w")
+                tk.Label(results_frame, text=f"📧 {email}", fg="blue").pack(anchor="w")
+                if bio:
+                    tk.Label(results_frame, text=f"📝 {bio}", fg="gray").pack(anchor="w")
+                tk.Label(results_frame, text="").pack()  # spacing
+
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"An error occurred: {e}")
+        finally:
+            conn.close()
+
+    # Buttons
+    tk.Button(main_frame, text="Search", width=15, command=perform_search).grid(row=2, column=0, columnspan=2, pady=10)
+    tk.Button(main_frame, text="Back to Dashboard", width=20, command=lambda: show_user_dashboard(root, user_email)).grid(row=4, column=0, columnspan=2, pady=5)
+           
+# ----------------------------------------------Search Students ---------------------------------------------
 
 def show_user_profile(root, user_email):
     """Displays the user's profile information."""
