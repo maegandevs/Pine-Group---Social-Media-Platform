@@ -300,7 +300,10 @@ class SocialApp:
         for p in posts:
             frame = tk.Frame(self.feed_frame, bg="white", bd=1, relief="solid")
             frame.pack(fill="x", padx=10, pady=5)
-            ttk.Label(frame, text=f"{p['username']} ({p['created_at']})", font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=6, pady=2)
+            header_text = f"{p['username']} ({p['created_at']})"
+            if p['updated_at']:
+                header_text += "  (edited)"
+            ttk.Label(frame, text=header_text, font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=6, pady=2)
             ttk.Label(frame, text=p['content'], wraplength=580).pack(anchor="w", padx=6)
             # Comments
             comments = get_comments_for_post(p['id'])
@@ -317,8 +320,8 @@ class SocialApp:
             ttk.Button(btn_frame, text="Like", command=lambda pid=p['id']: self.react(pid,'like')).pack(side="left", padx=2)
             ttk.Button(btn_frame, text="Dislike", command=lambda pid=p['id']: self.react(pid,'dislike')).pack(side="left", padx=2)
             ttk.Button(btn_frame, text="Comment", command=lambda pid=p['id']: self.add_comment_gui(pid)).pack(side="left", padx=2)
-            # Delete button (only for own posts)
             if self.current_user and p['user_id'] == self.current_user['id']:
+                ttk.Button(btn_frame, text="Edit", command=lambda pid=p['id']: self.edit_post_gui(pid)).pack(side="left", padx=2)
                 ttk.Button(btn_frame, text="Delete", command=lambda pid=p['id']: self.delete_post_gui(pid)).pack(side="left", padx=2)
 
     def react(self, post_id, r_type):
@@ -350,10 +353,29 @@ class SocialApp:
             else:
                 messagebox.showerror("Error", "You can only delete your own posts.")
 
+    def edit_post_gui(self, post_id):
+        if not self.current_user:
+            messagebox.showwarning("Not logged in", "Login first")
+            return
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("SELECT user_id, content FROM posts WHERE id = ?", (post_id,))
+        post = c.fetchone()
+        conn.close()
+        if not post or post['user_id'] != self.current_user['id']:
+            messagebox.showerror("Error", "You can only edit your own posts.")
+            return
+
+        # Ask for new text
+        new_text = simpledialog.askstring("Edit Post", "Update your post:", initialvalue=post['content'])
+        if new_text and new_text.strip():
+            update_post(post_id, new_text.strip())
+            messagebox.showinfo("Updated", "Post updated successfully.")
+            self.refresh_feed()
+
 # ------------------------- MAIN -------------------------
 if __name__ == "__main__":
     setup_database()
     root = tk.Tk()
     app = SocialApp(root)
     root.mainloop()
-    
