@@ -2,7 +2,7 @@ import sqlite3
 import datetime
 from datetime import datetime as dt
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import ttk, messagebox, scrolledtext, simpledialog
 
 DB_FILE = "social_media_full.db"
 TIME_FORMAT = "%m/%d/%Y at %H:%M"
@@ -16,7 +16,6 @@ def get_conn():
 def setup_database():
     conn = get_conn()
     c = conn.cursor()
-    # Users table
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +23,6 @@ def setup_database():
             email TEXT NOT NULL UNIQUE
         );
     """)
-    # Posts table
     c.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +33,6 @@ def setup_database():
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
     """)
-    # Comments table
     c.execute("""
         CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,7 +44,6 @@ def setup_database():
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
     """)
-    # Reactions table
     c.execute("""
         CREATE TABLE IF NOT EXISTS post_reactions (
             post_id INTEGER NOT NULL,
@@ -100,6 +96,23 @@ def create_post(user_id, content):
     conn.commit()
     conn.close()
     return post_id
+
+def delete_post(post_id, user_id):
+    """Delete a post if it belongs to the user"""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT user_id FROM posts WHERE id = ?", (post_id,))
+    post = c.fetchone()
+    if not post or post['user_id'] != user_id:
+        conn.close()
+        return False
+    # Delete related data
+    c.execute("DELETE FROM comments WHERE post_id = ?", (post_id,))
+    c.execute("DELETE FROM post_reactions WHERE post_id = ?", (post_id,))
+    c.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+    conn.commit()
+    conn.close()
+    return True
 
 def update_post(post_id, new_text):
     updated_ts = dt.now().strftime(TIME_FORMAT)
@@ -295,12 +308,18 @@ class SocialApp:
                 ttk.Label(frame, text="Comments:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=6)
                 for c in comments:
                     ttk.Label(frame, text=f"{c['username']}: {c['comment_text']}", wraplength=580, font=("Segoe UI", 9)).pack(anchor="w", padx=12)
+            # Reaction counts
+            counts = get_reaction_counts(p['id'])
+            ttk.Label(frame, text=f"👍 {counts['like']}   👎 {counts['dislike']}", font=("Segoe UI", 9)).pack(anchor="w", padx=6)
             # Buttons
             btn_frame = tk.Frame(frame, bg="white")
             btn_frame.pack(anchor="w", pady=4, padx=6)
             ttk.Button(btn_frame, text="Like", command=lambda pid=p['id']: self.react(pid,'like')).pack(side="left", padx=2)
             ttk.Button(btn_frame, text="Dislike", command=lambda pid=p['id']: self.react(pid,'dislike')).pack(side="left", padx=2)
             ttk.Button(btn_frame, text="Comment", command=lambda pid=p['id']: self.add_comment_gui(pid)).pack(side="left", padx=2)
+            # Delete button (only for own posts)
+            if self.current_user and p['user_id'] == self.current_user['id']:
+                ttk.Button(btn_frame, text="Delete", command=lambda pid=p['id']: self.delete_post_gui(pid)).pack(side="left", padx=2)
 
     def react(self, post_id, r_type):
         if not self.current_user:
@@ -318,9 +337,23 @@ class SocialApp:
             add_comment(post_id, self.current_user['email'], comment)
             self.refresh_feed()
 
+    def delete_post_gui(self, post_id):
+        if not self.current_user:
+            messagebox.showwarning("Not logged in", "Login first")
+            return
+        confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this post?")
+        if confirm:
+            success = delete_post(post_id, self.current_user['id'])
+            if success:
+                messagebox.showinfo("Deleted", "Your post was deleted successfully.")
+                self.refresh_feed()
+            else:
+                messagebox.showerror("Error", "You can only delete your own posts.")
+
 # ------------------------- MAIN -------------------------
 if __name__ == "__main__":
     setup_database()
     root = tk.Tk()
     app = SocialApp(root)
     root.mainloop()
+    
