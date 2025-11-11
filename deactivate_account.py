@@ -1,3 +1,6 @@
+import sqlite3
+
+
 class deactivate_user():
     def deactivate_user(conn, email):
         """
@@ -15,7 +18,7 @@ class deactivate_user():
             user = cursor.fetchone()
 
             if not user:
-                print(f "No user found with email: {email}")
+                print(f"No user found with email: {email}")
                 return
 
             # deactivate user
@@ -43,7 +46,7 @@ class deactivate_user():
             user = cursor.fetchone()
 
             if not user:
-                print(f "No user found with email: {email}")
+                print(f"No user found with email: {email}")
                 return
 
             # deactivate user
