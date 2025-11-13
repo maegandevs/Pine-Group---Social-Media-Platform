@@ -55,6 +55,15 @@ def setup_database():
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
     """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS followers (
+            follower_id INTEGER NOT NULL,
+            following_id INTEGER NOT NULL,
+            PRIMARY KEY (follower_id, following_id),
+            FOREIGN KEY(follower_id) REFERENCES users(id),
+            FOREIGN KEY(following_id) REFERENCES users(id)
+        );
+    """)
     conn.commit()
     conn.close()
 
@@ -87,6 +96,12 @@ def get_user_by_id(user_id):
     conn.close()
     return row
 
+def get_user_id_by_email(conn, email):
+    c = conn.cursor()
+    c.execute("SELECT id FROM users WHERE email = ?", (email,))
+    row = c.fetchone()
+    return row["id"] if row else None
+
 def create_post(user_id, content):
     ts = dt.now().strftime(TIME_FORMAT)
     conn = get_conn()
@@ -98,7 +113,6 @@ def create_post(user_id, content):
     return post_id
 
 def delete_post(post_id, user_id):
-    """Delete a post if it belongs to the user"""
     conn = get_conn()
     c = conn.cursor()
     c.execute("SELECT user_id FROM posts WHERE id = ?", (post_id,))
@@ -106,7 +120,6 @@ def delete_post(post_id, user_id):
     if not post or post['user_id'] != user_id:
         conn.close()
         return False
-    # Delete related data
     c.execute("DELETE FROM comments WHERE post_id = ?", (post_id,))
     c.execute("DELETE FROM post_reactions WHERE post_id = ?", (post_id,))
     c.execute("DELETE FROM posts WHERE id = ?", (post_id,))
@@ -134,6 +147,23 @@ def fetch_posts():
     rows = c.fetchall()
     conn.close()
     return rows
+
+# ------------------------- FOLLOWERS / FOLLOWING -------------------------
+def count_followers(user_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM followers WHERE following_id = ?", (user_id,))
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+def count_following(user_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM followers WHERE follower_id = ?", (user_id,))
+    count = c.fetchone()[0]
+    conn.close()
+    return count
 
 # ------------------------- COMMENTS -------------------------
 def add_comment(post_id, user_email, comment_text):
@@ -210,7 +240,7 @@ def set_reaction(post_id, user_id, reaction_type):
 class SocialApp:
     def __init__(self, root):
         self.root = root
-        root.title("Social Media Posts")
+        root.title("Social Media App")
         root.geometry("1000x700")
         root.config(bg="#fafafa")
         self.current_user = None
@@ -241,6 +271,10 @@ class SocialApp:
         self.logged_label = ttk.Label(self.left_frame, text="Not logged in", font=("Segoe UI", 10))
         self.logged_label.pack(padx=20, pady=(6,12))
 
+        # NEW FOLLOW COUNTS
+        self.follow_info = ttk.Label(self.left_frame, text="", font=("Segoe UI", 10, "bold"))
+        self.follow_info.pack(padx=20, pady=(0,12))
+
         ttk.Label(self.left_frame, text="Create a Post", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=20)
         self.post_text = scrolledtext.ScrolledText(self.left_frame, width=36, height=7, wrap=tk.WORD, font=("Segoe UI", 10))
         self.post_text.pack(padx=20, pady=(6,10))
@@ -266,6 +300,7 @@ class SocialApp:
             self.current_user = {'id': uid, 'username': username, 'email': email}
             self.logged_label.config(text=f"Logged in as {username}")
             messagebox.showinfo("Success", f"User {username} registered!")
+            self.update_follow_counts()
             self.refresh_feed()
         else:
             messagebox.showwarning("Exists", "User already exists")
@@ -276,10 +311,21 @@ class SocialApp:
         if user:
             self.current_user = dict(user)
             self.logged_label.config(text=f"Logged in as {user['username']}")
+            self.update_follow_counts()
             messagebox.showinfo("Success", f"Welcome {user['username']}")
             self.refresh_feed()
         else:
             messagebox.showwarning("Not Found", "User not found. Please register first.")
+
+    def update_follow_counts(self):
+        """Update the UI label with follower/following counts"""
+        if not self.current_user:
+            self.follow_info.config(text="")
+            return
+        uid = self.current_user["id"]
+        followers = count_followers(uid)
+        following = count_following(uid)
+        self.follow_info.config(text=f"Followers: {followers}   Following: {following}")
 
     def create_post(self):
         if not self.current_user:
@@ -305,16 +351,13 @@ class SocialApp:
                 header_text += "  (edited)"
             ttk.Label(frame, text=header_text, font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=6, pady=2)
             ttk.Label(frame, text=p['content'], wraplength=580).pack(anchor="w", padx=6)
-            # Comments
             comments = get_comments_for_post(p['id'])
             if comments:
                 ttk.Label(frame, text="Comments:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=6)
                 for c in comments:
                     ttk.Label(frame, text=f"{c['username']}: {c['comment_text']}", wraplength=580, font=("Segoe UI", 9)).pack(anchor="w", padx=12)
-            # Reaction counts
             counts = get_reaction_counts(p['id'])
             ttk.Label(frame, text=f"👍 {counts['like']}   👎 {counts['dislike']}", font=("Segoe UI", 9)).pack(anchor="w", padx=6)
-            # Buttons
             btn_frame = tk.Frame(frame, bg="white")
             btn_frame.pack(anchor="w", pady=4, padx=6)
             ttk.Button(btn_frame, text="Like", command=lambda pid=p['id']: self.react(pid,'like')).pack(side="left", padx=2)
@@ -365,8 +408,6 @@ class SocialApp:
         if not post or post['user_id'] != self.current_user['id']:
             messagebox.showerror("Error", "You can only edit your own posts.")
             return
-
-        # Ask for new text
         new_text = simpledialog.askstring("Edit Post", "Update your post:", initialvalue=post['content'])
         if new_text and new_text.strip():
             update_post(post_id, new_text.strip())
