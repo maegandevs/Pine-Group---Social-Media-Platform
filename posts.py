@@ -96,12 +96,6 @@ def get_user_by_id(user_id):
     conn.close()
     return row
 
-def get_user_id_by_email(conn, email):
-    c = conn.cursor()
-    c.execute("SELECT id FROM users WHERE email = ?", (email,))
-    row = c.fetchone()
-    return row["id"] if row else None
-
 def create_post(user_id, content):
     ts = dt.now().strftime(TIME_FORMAT)
     conn = get_conn()
@@ -164,6 +158,27 @@ def count_following(user_id):
     count = c.fetchone()[0]
     conn.close()
     return count
+
+def follow_user(follower_id, following_id):
+    if follower_id == following_id:
+        return False
+    conn = get_conn()
+    c = conn.cursor()
+    try:
+        c.execute("INSERT OR IGNORE INTO followers (follower_id, following_id) VALUES (?, ?)", 
+                  (follower_id, following_id))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def unfollow_user(follower_id, following_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("DELETE FROM followers WHERE follower_id = ? AND following_id = ?", 
+              (follower_id, following_id))
+    conn.commit()
+    conn.close()
 
 # ------------------------- COMMENTS -------------------------
 def add_comment(post_id, user_email, comment_text):
@@ -271,7 +286,6 @@ class SocialApp:
         self.logged_label = ttk.Label(self.left_frame, text="Not logged in", font=("Segoe UI", 10))
         self.logged_label.pack(padx=20, pady=(6,12))
 
-        # NEW FOLLOW COUNTS
         self.follow_info = ttk.Label(self.left_frame, text="", font=("Segoe UI", 10, "bold"))
         self.follow_info.pack(padx=20, pady=(0,12))
 
@@ -289,6 +303,7 @@ class SocialApp:
         self.feed_frame.pack(fill="both", expand=True)
         self.refresh_feed()
 
+    # ------------------------- USER ACTIONS -------------------------
     def register(self):
         email = self.email_entry.get().strip()
         username = self.username_entry.get().strip()
@@ -318,7 +333,6 @@ class SocialApp:
             messagebox.showwarning("Not Found", "User not found. Please register first.")
 
     def update_follow_counts(self):
-        """Update the UI label with follower/following counts"""
         if not self.current_user:
             self.follow_info.config(text="")
             return
@@ -338,34 +352,6 @@ class SocialApp:
         create_post(self.current_user['id'], content)
         self.post_text.delete("1.0","end")
         self.refresh_feed()
-
-    def refresh_feed(self):
-        for widget in self.feed_frame.winfo_children():
-            widget.destroy()
-        posts = fetch_posts()
-        for p in posts:
-            frame = tk.Frame(self.feed_frame, bg="white", bd=1, relief="solid")
-            frame.pack(fill="x", padx=10, pady=5)
-            header_text = f"{p['username']} ({p['created_at']})"
-            if p['updated_at']:
-                header_text += "  (edited)"
-            ttk.Label(frame, text=header_text, font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=6, pady=2)
-            ttk.Label(frame, text=p['content'], wraplength=580).pack(anchor="w", padx=6)
-            comments = get_comments_for_post(p['id'])
-            if comments:
-                ttk.Label(frame, text="Comments:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=6)
-                for c in comments:
-                    ttk.Label(frame, text=f"{c['username']}: {c['comment_text']}", wraplength=580, font=("Segoe UI", 9)).pack(anchor="w", padx=12)
-            counts = get_reaction_counts(p['id'])
-            ttk.Label(frame, text=f"👍 {counts['like']}   👎 {counts['dislike']}", font=("Segoe UI", 9)).pack(anchor="w", padx=6)
-            btn_frame = tk.Frame(frame, bg="white")
-            btn_frame.pack(anchor="w", pady=4, padx=6)
-            ttk.Button(btn_frame, text="Like", command=lambda pid=p['id']: self.react(pid,'like')).pack(side="left", padx=2)
-            ttk.Button(btn_frame, text="Dislike", command=lambda pid=p['id']: self.react(pid,'dislike')).pack(side="left", padx=2)
-            ttk.Button(btn_frame, text="Comment", command=lambda pid=p['id']: self.add_comment_gui(pid)).pack(side="left", padx=2)
-            if self.current_user and p['user_id'] == self.current_user['id']:
-                ttk.Button(btn_frame, text="Edit", command=lambda pid=p['id']: self.edit_post_gui(pid)).pack(side="left", padx=2)
-                ttk.Button(btn_frame, text="Delete", command=lambda pid=p['id']: self.delete_post_gui(pid)).pack(side="left", padx=2)
 
     def react(self, post_id, r_type):
         if not self.current_user:
@@ -413,6 +399,68 @@ class SocialApp:
             update_post(post_id, new_text.strip())
             messagebox.showinfo("Updated", "Post updated successfully.")
             self.refresh_feed()
+
+    def follow_gui(self, user_id):
+        if follow_user(self.current_user['id'], user_id):
+            messagebox.showinfo("Followed", "You are now following this user!")
+            self.update_follow_counts()
+            self.refresh_feed()
+
+    def unfollow_gui(self, user_id):
+        unfollow_user(self.current_user['id'], user_id)
+        messagebox.showinfo("Unfollowed", "You have unfollowed this user.")
+        self.update_follow_counts()
+        self.refresh_feed()
+
+    # ------------------------- FEED -------------------------
+    def refresh_feed(self):
+        for widget in self.feed_frame.winfo_children():
+            widget.destroy()
+        posts = fetch_posts()
+        for p in posts:
+            frame = tk.Frame(self.feed_frame, bg="white", bd=1, relief="solid")
+            frame.pack(fill="x", padx=10, pady=5)
+            header_text = f"{p['username']} ({p['created_at']})"
+            if p['updated_at']:
+                header_text += "  (edited)"
+            ttk.Label(frame, text=header_text, font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=6, pady=2)
+            ttk.Label(frame, text=p['content'], wraplength=580).pack(anchor="w", padx=6)
+
+            comments = get_comments_for_post(p['id'])
+            if comments:
+                ttk.Label(frame, text="Comments:", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=6)
+                for c in comments:
+                    ttk.Label(frame, text=f"{c['username']}: {c['comment_text']}", wraplength=580, font=("Segoe UI", 9)).pack(anchor="w", padx=12)
+
+            counts = get_reaction_counts(p['id'])
+            ttk.Label(frame, text=f"👍 {counts['like']}   👎 {counts['dislike']}", font=("Segoe UI", 9)).pack(anchor="w", padx=6)
+
+            btn_frame = tk.Frame(frame, bg="white")
+            btn_frame.pack(anchor="w", pady=4, padx=6)
+
+            # Reactions and comments
+            ttk.Button(btn_frame, text="Like", command=lambda pid=p['id']: self.react(pid,'like')).pack(side="left", padx=2)
+            ttk.Button(btn_frame, text="Dislike", command=lambda pid=p['id']: self.react(pid,'dislike')).pack(side="left", padx=2)
+            ttk.Button(btn_frame, text="Comment", command=lambda pid=p['id']: self.add_comment_gui(pid)).pack(side="left", padx=2)
+
+            # Edit/Delete for own posts
+            if self.current_user and p['user_id'] == self.current_user['id']:
+                ttk.Button(btn_frame, text="Edit", command=lambda pid=p['id']: self.edit_post_gui(pid)).pack(side="left", padx=2)
+                ttk.Button(btn_frame, text="Delete", command=lambda pid=p['id']: self.delete_post_gui(pid)).pack(side="left", padx=2)
+
+            # Follow/Unfollow for other users
+            if self.current_user and p['user_id'] != self.current_user['id']:
+                conn = get_conn()
+                c = conn.cursor()
+                c.execute("SELECT 1 FROM followers WHERE follower_id=? AND following_id=?", 
+                          (self.current_user['id'], p['user_id']))
+                is_following = c.fetchone() is not None
+                conn.close()
+
+                if is_following:
+                    ttk.Button(btn_frame, text="Unfollow", command=lambda uid=p['user_id']: self.unfollow_gui(uid)).pack(side="left", padx=2)
+                else:
+                    ttk.Button(btn_frame, text="Follow", command=lambda uid=p['user_id']: self.follow_gui(uid)).pack(side="left", padx=2)
 
 # ------------------------- MAIN -------------------------
 if __name__ == "__main__":
